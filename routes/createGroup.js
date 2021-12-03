@@ -1,6 +1,8 @@
 const express = require("express");
 const groupModel = require("../models/group");
 const freeclimbSDK = require('@freeclimb/sdk');
+var util = require('util');
+const Group = require("../models/group");
 const app = express();
 
 require('dotenv').config();
@@ -8,15 +10,63 @@ const accountId = 'ACcabe723dfe4021d7a77923476fa5bd43454d8c3e';
 const apiKey = 'f750bdbec90a4febc3aee6a6bbd88f70e8418d37';
 const freeclimb = freeclimbSDK(accountId, apiKey);
 
+
+
 app.post('/incomingSms', (req, res) => {
-    let to = '+13134002132' //your Verified Number
+    
+    console.log(util.inspect(req));
+
+    //your Verified Number
     let from = '+18333412057' //your FreeClimb Number
-    console.log(res);
-    //response.body has message and from number that we will check with if statement
-    //if message returned is something 
-    freeclimb.api.messages.create(from, to, 'Hey! we are indicating we have received a text').catch(err => {console.log(err)})
+    let to=req.body.from;
+
+    //nonOrganizer responses
+    if(req.body.text === "Yes" || req.body.text === "yes"|| req.body.text === "Y" || req.body.text === "y"){
+    freeclimb.api.messages.create(from, to, 'Thank you for completing your chores for the week, the organizer will check them and we will let you know!').catch(err => {console.log(err)})
+    notifyHead(req.body.from);
+    }
+    else if (req.body.text === "No" || req.body.text === "no"|| req.body.text === "N" || req.body.text === "n"){
+    }
+
+    //organizer Responses
+    else if(req.body.text === "1") //the organizer is confirming the chore is completed 
+    {
+        //need to know who the organizer is talking about 
+        //so we can change if they have completed or not
+        //send final no response text
+    }
+
+    else if(req.body.text === "2") //the orgnaizer is denying the chore is completed
+    {
+         //need to know who the organizer is talking about 
+         //leave completed or not and send them text
+        //send final no response text
+
+    }
+    else{
+        freeclimb.api.messages.create(from, to, 'Unknown input, please respond with Y or N').catch(err => {console.log(err)});
+    }
+   
   });
 
+function notifyHead(notHead){
+      groupModel.findOne({ "members.number": notHead  })
+      .then((group) => {
+          if(group) {
+              console.log("Success now doing something with this group")
+              console.log(group);
+              var to=group.members[group.head].number;
+              //we need to search the members array for the name that matches the notHead number and then use that index to also say their chore
+              var name="idk";
+              var chore="idk"
+              //freeclimb.api.messages.create('+18333412057', to, 'Greetings organizer, it looks like name has completed this list of chores: ' + chore. Please respond with a 1 if they have completed them and a 2 if not.).catch(err => {console.log(err)});
+              
+          }
+          else{
+              console.log("Sadness no group was found");
+          }
+      })
+}
 app.get("/", (req, res) => {
     res.send(req.user); // The req.user stores the entire user that has been authenticated inside of it.
 });
@@ -93,6 +143,7 @@ app.post('/createGroup', (req, res) => {
                         .catch(err => console.log(err))
                     }
 
+                    
                     setInterval(() => {
                         groupModel.findOne({ address: req.user["address"] })
                         .then((group) => {
@@ -117,7 +168,7 @@ app.post('/createGroup', (req, res) => {
                                     var chores = group.chores[chorePos];
 
                              
-                                    freeclimb.api.messages.create(from, to, 'Hey ' + group.members[member]["name"] + '! Your chores for the week are:\n' + chores)
+                                    freeclimb.api.messages.create(from, to, 'Hey ' + group.members[member]["name"] + '! Your chores for the week are:\n' + chores + " Please respond with a Y or N indicating if you have or haven't completed your chores")
                                     .catch(err => console.log(err))
                                     
                                     getMessages().then(messages => {
@@ -197,7 +248,7 @@ app.get("/sendChores", (req, res) => {
                 
                 var chores = group.chores[chorePos];
 
-                freeclimb.api.messages.create(from, to, 'Hey ' + group.members[member]["name"] + '! Your chores for the week are:\n' + chores)
+                freeclimb.api.messages.create(from, to, 'Hey ' + group.members[member]["name"] + '! Your chores for the week are:\n' + chores + " Please respond with a Yes or No indicating if they have been completed")
                 .catch(err => console.log(err))
 
                 member++;
@@ -230,22 +281,5 @@ app.put("/updateHead", (req, res) => {
         })
     });
 });
-
-async function getMessages() {
-    // Create array to store all members 
-    const messages = []
-    // Invoke GET method to retrieve initial list of members information
-    const first = await freeclimb.api.messages.getList()
-    messages.push(...first.messages)
-    // Get Uri for next page
-    let nextPageUri = first.nextPageUri
-    // Retrieve entire members list 
-    while (nextPageUri) {
-        const nextPage = await freeclimb.api.messages.getNextPage(nextPageUri)
-        messages.push(...nextPage.messages)
-        nextPageUri = nextPage.nextPageUri
-    }
-    return messages
-}
 
 module.exports = app;
