@@ -19,35 +19,63 @@ app.post('/incomingSms', (req, res) => {
     //your Verified Number
     let from = '+18333412057' //your FreeClimb Number
     let to=req.body.from;
+    let split_text = req.body.text.split(' ')
 
     //nonOrganizer responses
-    if(req.body.text === "Yes" || req.body.text === "yes"|| req.body.text === "Y" || req.body.text === "y"){
-    freeclimb.api.messages.create(from, to, 'Thank you for completing your chores for the week, the organizer will check them and we will let you know!').catch(err => {console.log(err)})
-    notifyHead(req.body.from);
-    }
-    else if (req.body.text === "No" || req.body.text === "no"|| req.body.text === "N" || req.body.text === "n"){
-    }
-
+    if(split_text.length === 1){
+        if(req.body.text === "Yes" || req.body.text === "yes"|| req.body.text === "Y" || req.body.text === "y"){
+            freeclimb.api.messages.create(from, to, 'Thank you for completing your chores for the week, the organizer will check them and we will let you know!').catch(err => {console.log(err)})
+            notifyHead(req.body.from);
+        }
+        else if (req.body.text === "No" || req.body.text === "no"|| req.body.text === "N" || req.body.text === "n"){
+        }
+        else{
+            freeclimb.api.messages.create(from, to, 'Unknown input, please respond with Y or N').catch(err => {console.log(err)});
+        }
+    } 
     //organizer Responses
-    else if(req.body.text === "1") //the organizer is confirming the chore is completed 
-    {
-        //need to know who the organizer is talking about 
-        //so we can change if they have completed or not
-        //send final no response text
-    }
-
-    else if(req.body.text === "2") //the orgnaizer is denying the chore is completed
-    {
-         //need to know who the organizer is talking about 
-         //leave completed or not and send them text
-        //send final no response text
-
+    else if(split_text.length === 2){ // split the message into separate words if 2 words continue
+        confirmChores(to, split_text[0], split_text[1]);
     }
     else{
-        freeclimb.api.messages.create(from, to, 'Unknown input, please respond with Y or N').catch(err => {console.log(err)});
+        freeclimb.api.messages.create(from, to, 'Unknown input').catch(err => {console.log(err)});
     }
+    
    
   });
+
+function confirmChores(head, check, confirm){
+    groupModel.findOne({ "members.number": head  })
+      .then((group) => {
+          if(group) {
+            if((check.length === 1) && (check.charAt(0)-'a' < group.members.length-1)){
+                // get the person corresponding to a-e
+
+
+                // check completion
+                if(req.body.text === "1") //the organizer is confirming the chore is completed 
+                {
+                    //send final no response text
+                }
+    
+                else if(req.body.text === "2") //the orgnaizer is denying the chore is completed
+                {
+                    //send final no response text
+    
+                }
+                else{
+                    freeclimb.api.messages.create(from, to, 'Unknown input, please respond letter corresponding to person you are checking followed by 1 or 2').catch(err => {console.log(err)});
+                }
+            }
+              
+          }
+          else{
+              console.log("Sadness no group was found");
+          }
+      })
+    
+        
+}
 
 function notifyHead(notHead){
       groupModel.findOne({ "members.number": notHead  })
@@ -56,10 +84,17 @@ function notifyHead(notHead){
               console.log("Success now doing something with this group")
               console.log(group);
               var to=group.members[group.head].number;
+              var index = 0;
+              for(let i =0; i < group.members.length; i++){
+                if(group.members[i].number === notHead){
+                    index = i;
+                }
+              }
               //we need to search the members array for the name that matches the notHead number and then use that index to also say their chore
-              var name="idk";
-              var chore="idk"
-              //freeclimb.api.messages.create('+18333412057', to, 'Greetings organizer, it looks like name has completed this list of chores: ' + chore. Please respond with a 1 if they have completed them and a 2 if not.).catch(err => {console.log(err)});
+              var name=group.members[i].name;
+              var chore=group.members[i].chore;
+              //freeclimb.api.messages.create('+18333412057', to, 'Greetings organizer, it looks like name has completed this list of chores: ' + chore.).catch(err => {console.log(err)});
+              //freeclimb.api.messages.create('+18333412057', to, 'Please respond with the letter corresponding to the person you are checking followed by a 1 for complete or a 2 for incomplete. For example, a 1.).catch(err => {console.log(err)});
               
           }
           else{
