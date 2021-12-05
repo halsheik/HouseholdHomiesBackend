@@ -53,12 +53,12 @@ function confirmChores(head, check, confirm){
 
 
                 // check completion
-                if(req.body.text === "1") //the organizer is confirming the chore is completed 
+                if(confirm === "1") //the organizer is confirming the chore is completed 
                 {
                     //send final no response text
                 }
     
-                else if(req.body.text === "2") //the orgnaizer is denying the chore is completed
+                else if(confirm === "2") //the orgnaizer is denying the chore is completed
                 {
                     //send final no response text
     
@@ -81,7 +81,7 @@ function notifyHead(notHead){
       groupModel.findOne({ "members.number": notHead  })
       .then((group) => {
           if(group) {
-              console.log("Success now doing something with this group")
+              console.log("Success now doing something with this group");
               console.log(group);
               var to=group.members[group.head].number;
               var index = 0;
@@ -92,9 +92,20 @@ function notifyHead(notHead){
               }
               //we need to search the members array for the name that matches the notHead number and then use that index to also say their chore
               var name=group.members[i].name;
-              var chore=group.members[i].chore;
+              var chore=group.chores[i].name;
               //freeclimb.api.messages.create('+18333412057', to, 'Greetings organizer, it looks like name has completed this list of chores: ' + chore.).catch(err => {console.log(err)});
               //freeclimb.api.messages.create('+18333412057', to, 'Please respond with the letter corresponding to the person you are checking followed by a 1 for complete or a 2 for incomplete. For example, a 1.).catch(err => {console.log(err)});
+              var names = "";
+              var letter = 97;
+              for(let i = 0; i < group.members.length; i++){
+                  if(i!=group.head){
+                    var m_name = group.members[i].name;
+                    var print_name = char(letter)+") "+ m_name + "/n";
+                    names+=print_name;
+                    letter++;
+                  }
+              }
+              //freeclimb.api.messages.create('+18333412057', to, names).catch(err => {console.log(err)});
               
           }
           else{
