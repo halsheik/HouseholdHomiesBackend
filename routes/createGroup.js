@@ -50,17 +50,31 @@ function confirmChores(head, check, confirm){
           if(group) {
             if((check.length === 1) && (check.charAt(0)-'a' < group.members.length-1)){
                 // get the person corresponding to a-e
-
+                let person_to_check = 0;
+                let find_index_of_person = 0;
+                for(let i =0; i < group.members.length; i++){
+                    if(find_index_of_person === (check.charAt(0)-'a')){
+                        person_to_check=find_index_of_person;
+                        break;
+                    }
+                    if(i != group.head){
+                        find_index_of_person++;
+                    }
+                }
+                
+                let to=group.members[person_to_check].number;
 
                 // check completion
                 if(confirm === "1") //the organizer is confirming the chore is completed 
                 {
-                    //send final no response text
+                    group.members[person_to_check].completed = true;
+                    await group.save();
+                    freeclimb.api.messages.create(from, to, 'Your chore has been marked completed by the organizer!').catch(err => {console.log(err)});
                 }
     
                 else if(confirm === "2") //the orgnaizer is denying the chore is completed
                 {
-                    //send final no response text
+                    freeclimb.api.messages.create(from, to, 'Please do your chore better').catch(err => {console.log(err)});
     
                 }
                 else{
