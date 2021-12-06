@@ -35,7 +35,9 @@ app.post('/incomingSms', (req, res) => {
     } 
     //organizer Responses
     else if(split_text.length === 2){ // split the message into separate words if 2 words continue
-        confirmChores(to, split_text[0], split_text[1]);
+        console.log(split_text[0])
+        console.log(split_text[1])
+        confirmChores(to, split_text[0].toLowerCase(), split_text[1]);
     }
     else{
         freeclimb.api.messages.create(from, to, 'Unknown input').catch(err => {console.log(err)});
@@ -48,37 +50,52 @@ function confirmChores(head, check, confirm){
     groupModel.findOne({ "members.number": head  })
       .then((group) => {
           if(group) {
-            if((check.length === 1) && (check.charAt(0)-'a' < group.members.length-1)){
+              console.log("I have found the group")
+              console.log((check.charCodeAt(0)-'a'.charCodeAt(0)));
+              console.log(check.length);
+            if((check.length === 1) && ((check.charCodeAt(0)-'a'.charCodeAt(0)) < group.members.length)){
                 // get the person corresponding to a-e
                 let person_to_check = 0;
-                let find_index_of_person = 0;
+                let find_index_of_person = -1;
+                // head@1 find=2 check=1
                 for(let i =0; i < group.members.length; i++){
-                    if(find_index_of_person === (check.charAt(0)-'a')){
-                        person_to_check=find_index_of_person;
-                        break;
-                    }
                     if(i != group.head){
                         find_index_of_person++;
+                    }
+                    if(find_index_of_person === (check.charAt(0)-'a')){
+                        person_to_check=i;
+                        break;
                     }
                 }
                 
                 let to=group.members[person_to_check].number;
-
+                console.log("about to check completion")
                 // check completion
                 if(confirm === "1") //the organizer is confirming the chore is completed 
                 {
+                    console.log("we are in 1")
                     group.members[person_to_check].completed = true;
-                    await group.save();
-                    freeclimb.api.messages.create(from, to, 'Your chore has been marked completed by the organizer!').catch(err => {console.log(err)});
+                    group.save();
+                    group.markModified('members');
+                    // var stringtocheck='members[' + person_to_check + '].completed';
+                    // groupModel.findOneAndUpdate({ "members.number": head  }, { stringtocheck: true }, { new: true }, (err, group) => {
+                    //     // Handle any possible database errors
+                    //     if (err) 
+                    //         return res.status(500).send(err);
+
+                    //     //return res.send(group);
+                    // })
+                    console.log("we have passed save")
+                    freeclimb.api.messages.create('+18333412057', to, 'Your chore has been marked completed by the organizer!').catch(err => {console.log(err)});
                 }
     
                 else if(confirm === "2") //the orgnaizer is denying the chore is completed
                 {
-                    freeclimb.api.messages.create(from, to, 'Please do your chore better').catch(err => {console.log(err)});
+                    freeclimb.api.messages.create('+18333412057', to, 'Please do your chore better').catch(err => {console.log(err)});
     
                 }
                 else{
-                    freeclimb.api.messages.create(from, to, 'Unknown input, please respond letter corresponding to person you are checking followed by 1 or 2').catch(err => {console.log(err)});
+                    freeclimb.api.messages.create('+18333412057', to, 'Unknown input, please respond letter corresponding to person you are checking followed by 1 or 2').catch(err => {console.log(err)});
                 }
             }
               
@@ -105,21 +122,35 @@ function notifyHead(notHead){
                 }
               }
               //we need to search the members array for the name that matches the notHead number and then use that index to also say their chore
-              var name=group.members[i].name;
-              var chore=group.chores[i].name;
-              //freeclimb.api.messages.create('+18333412057', to, 'Greetings organizer, it looks like name has completed this list of chores: ' + chore.).catch(err => {console.log(err)});
-              //freeclimb.api.messages.create('+18333412057', to, 'Please respond with the letter corresponding to the person you are checking followed by a 1 for complete or a 2 for incomplete. For example, a 1.).catch(err => {console.log(err)});
+              var name=group.members[index].name;
+              let chorePos = group.head + index;
+
+              if(chorePos >= group.members.length) {
+                chorePos = chorePos % group.members.length;
+            }
+            
+              var chores = group.chores[chorePos];
+
+        
+         
+            
+
+            
+
+    
+              freeclimb.api.messages.create('+18333412057', to, 'Greetings organizer, it looks like ' + name + ' has completed this list of chores: ' + chores).catch(err => {console.log(err)});
+              freeclimb.api.messages.create('+18333412057', to, 'Please respond with the letter corresponding to the person you are checking followed by a 1 for complete or a 2 for incomplete. For example, a 1.').catch(err => {console.log(err)});
               var names = "";
               var letter = 97;
               for(let i = 0; i < group.members.length; i++){
                   if(i!=group.head){
                     var m_name = group.members[i].name;
-                    var print_name = char(letter)+") "+ m_name + "/n";
+                    var print_name = String.fromCharCode(letter)+") "+ m_name + "/n";
                     names+=print_name;
                     letter++;
                   }
               }
-              //freeclimb.api.messages.create('+18333412057', to, names).catch(err => {console.log(err)});
+              freeclimb.api.messages.create('+18333412057', to, names).catch(err => {console.log(err)});
               
           }
           else{
@@ -204,7 +235,7 @@ app.post('/createGroup', (req, res) => {
                     }
 
                     
-                    setInterval(() => {
+                    // setInterval(() => {
                         groupModel.findOne({ address: req.user["address"] })
                         .then((group) => {
                             if(group) {
@@ -231,12 +262,13 @@ app.post('/createGroup', (req, res) => {
                                     freeclimb.api.messages.create(from, to, 'Hey ' + group.members[member]["name"] + '! Your chores for the week are:\n' + chores + " Please respond with a Y or N indicating if you have or haven't completed your chores")
                                     .catch(err => console.log(err))
                                     
-                                    getMessages().then(messages => {
-                                        // Use messages
-                                        console.log(messages)
-                                    }).catch(err => {
-                                        // Catch Errors
-                                    })
+                                    
+                                    // getMessages().then(messages => {
+                                    //     // Use messages
+                                    //     console.log(messages)
+                                    // }).catch(err => {
+                                    //     // Catch Errors
+                                    // })
                                     
 
                                     member++;
@@ -275,7 +307,7 @@ app.post('/createGroup', (req, res) => {
                         })
 
                         
-                    }, 86400000)
+                    // }, 86400000)
 
                     
                     res.sendStatus(200)
