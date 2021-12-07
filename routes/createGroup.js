@@ -139,13 +139,12 @@ function notifyHead(notHead){
 
     
               freeclimb.api.messages.create('+18333412057', to, 'Greetings organizer, it looks like ' + name + ' has completed this list of chores: ' + chores).catch(err => {console.log(err)});
-              freeclimb.api.messages.create('+18333412057', to, 'Please respond with the letter corresponding to the person you are checking followed by a 1 for complete or a 2 for incomplete. For example, a 1.').catch(err => {console.log(err)});
-              var names = "";
+              var names = 'Please respond with the letter corresponding to the person you are checking followed by a 1 for complete or a 2 for incomplete. For example, a 1.\n';
               var letter = 97;
               for(let i = 0; i < group.members.length; i++){
                   if(i!=group.head){
                     var m_name = group.members[i].name;
-                    var print_name = String.fromCharCode(letter)+") "+ m_name + "/n";
+                    var print_name = String.fromCharCode(letter)+") "+ m_name + "\n";
                     names+=print_name;
                     letter++;
                   }
